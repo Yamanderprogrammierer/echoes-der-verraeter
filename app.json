@@ -5,14 +5,17 @@
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
+    "scheme": "qraudio",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0E0F13",
+    "backgroundColor": "#000000",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.example.qraudio",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSAppTransportSecurity": { "NSAllowsArbitraryLoadsForMedia": true }
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoadsForMedia": true
+        }
       }
     },
     "android": {
@@ -31,7 +34,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "QR Audio uses the camera to scan QR codes that link to audio files.",
+          "cameraPermission": "QR Audio nutzt die Kamera, um QR-Codes mit Audio-Links zu scannen.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
@@ -43,7 +46,10 @@
           "enableBackgroundPlayback": true
         }
       ],
-      "expo-document-picker"
+      "expo-document-picker",
+      "expo-router",
+      "expo-font",
+      "expo-asset"
     ]
   }
 }

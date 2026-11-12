@@ -84,7 +84,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     (track: Track) => {
       const uri = playableUri(track);
       if (!uri) {
-        Alert.alert('Cannot play', 'This track has no file or link.');
+        Alert.alert('Abspielen nicht möglich', 'Zu diesem Audio gibt es keine Datei und keinen Link.');
         return;
       }
       if (current?.id === track.id && status.isLoaded) {
@@ -169,7 +169,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       const updated = await downloadTrack(track);
       setLibrary((prev) => prev.map((t) => (t.id === track.id ? updated : t)));
     } catch (e) {
-      Alert.alert('Download failed', e instanceof Error ? e.message : String(e));
+      Alert.alert('Download fehlgeschlagen',e instanceof Error ? e.message : String(e));
     } finally {
       setDownloading((d) => {
         const { [track.id]: _, ...rest } = d;

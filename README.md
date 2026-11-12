@@ -3,11 +3,11 @@
 An Expo app for iPhone and iPad that scans QR codes linking to MP3 files and plays them.
 
 ## Features
-- **Scan**: point the camera at a QR code that holds an MP3 link (`https://…/file.mp3`). It starts playing right away. There's a flashlight toggle for dark rooms.
-- **Open from Files**: import one or more MP3s from the iOS Files app (iCloud Drive, On My iPhone, etc.). The files are copied into the app, so they still play later.
-- **Enter a link**: paste an MP3 address by hand.
-- **Now Playing**: play/pause, skip 15 s back or forward, and a seek bar you can drag.
-- **Library**: every track you scan or import is saved. Long-press or tap `…` to rename a track, save a streamed track for offline use, or delete it.
+The UI is in German, with a dark style and glowing controls, built with Expo Router (screens in `src/app/`).
+
+- **Header** (on every screen): the glowing **Echoes** title. Below it, a play/pause button, the `Lauschen | Lösen` switch, and a keyboard button for typing in an MP3 link.
+- **Lauschen** (listen): a big echo button in the middle. Tapping it opens the camera scanner (`src/app/scan.tsx`). The camera only runs while the scanner is open. A QR code that holds an MP3 link (`https://…/file.mp3`) starts playing and closes the scanner. The echo button pulses while audio is playing. After a scan, a player panel appears under the echo button. It has play/pause and a slider you can tap or drag to jump anywhere in the MP3.
+- **Lösen** (solve): asks "Willst du das Rätsel lösen?". *Ja* shows "Bald verfügbar." and *Nein* goes back to Lauschen.
 - Plays when the silent switch is on, keeps playing in the background, and shows lock-screen / Control Center controls.
 - iPad: works in every orientation and in Split View, with layouts that stay centred on wide screens.
 
