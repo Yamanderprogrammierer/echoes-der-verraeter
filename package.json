@@ -29,6 +29,7 @@
     "@types/react": "~19.3.0",
     "eslint": "^9.39.5",
     "eslint-config-expo": "~58.0.4",
+    "qrcode": "^1.5.4",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -37,7 +38,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "qr:schluessel": "node tools/neuer-schluessel.mjs"
+    "qr:schluessel": "node tools/neuer-schluessel.mjs",
+    "echoes": "node tools/echoes-aus-ordner.mjs"
   },
   "private": true
 }

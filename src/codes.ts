@@ -1,13 +1,15 @@
 import nacl from 'tweetnacl';
 
+import { BUNDLED_ECHOES } from './bundledEchoes';
 import { ECHOES_PUBLIC_KEY, isAllowedUrl } from './config';
-import { titleFromUrl } from './library';
+import { EchoSource, titleFromUrl } from './library';
 import { extractUrl } from './theme';
 
 /**
  * Signed Echoes code, as made by tools/qr-generator.html:
  *   ECHOES1.<payload>.<signature>
  * payload   = base64url(UTF-8 JSON { "u": mp3 link, "t": title })
+ *          or base64url(UTF-8 JSON { "f": id of a built-in MP3, "t": title })  (npm run echoes)
  * signature = base64url(Ed25519 signature of the payload text)
  */
 export const CODE_PREFIX = 'ECHOES1.';
@@ -16,8 +18,9 @@ export const CODE_PREFIX = 'ECHOES1.';
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
 export type CodeResult =
-  | { ok: true; url: string; title: string }
-  | { ok: false; reason: 'not-ours' | 'no-link' };
+  | { ok: true; source: EchoSource; title: string }
+  /** missing = a valid code for a built-in MP3 this app version doesn't contain yet. */
+  | { ok: false; reason: 'not-ours' | 'no-link' | 'missing' };
 
 const publicKey = ECHOES_PUBLIC_KEY ? decodeBase64(ECHOES_PUBLIC_KEY.replace(/\+/g, '-').replace(/\//g, '_')) : null;
 
@@ -36,7 +39,7 @@ export function readCode(text: string): CodeResult {
   const url = extractUrl(trimmed);
   if (!url) return { ok: false, reason: 'no-link' };
   if (signedCodesOnly || !isAllowedUrl(url)) return { ok: false, reason: 'not-ours' };
-  return { ok: true, url, title: titleFromUrl(url) };
+  return { ok: true, source: { url }, title: titleFromUrl(url) };
 }
 
 function verifySigned(code: string): CodeResult | null {
@@ -51,10 +54,18 @@ function verifySigned(code: string): CodeResult | null {
   try {
     const bytes = decodeBase64(payloadText);
     if (!bytes) return null;
-    const data = JSON.parse(utf8Decode(bytes)) as { u?: unknown; t?: unknown };
+    const data = JSON.parse(utf8Decode(bytes)) as { u?: unknown; f?: unknown; t?: unknown };
+    const named = typeof data.t === 'string' && data.t.trim() ? data.t.trim() : null;
+
+    // Built-in MP3 from assets/echoes/ (made with `npm run echoes`).
+    if (typeof data.f === 'string') {
+      if (!(data.f in BUNDLED_ECHOES)) return { ok: false, reason: 'missing' };
+      return { ok: true, source: { asset: data.f }, title: named ?? data.f };
+    }
+
+    // Online MP3 (made with tools/qr-generator.html).
     if (typeof data.u !== 'string' || !/^https?:\/\//i.test(data.u)) return null;
-    const title = typeof data.t === 'string' && data.t.trim() ? data.t.trim() : titleFromUrl(data.u);
-    return { ok: true, url: data.u, title };
+    return { ok: true, source: { url: data.u }, title: named ?? titleFromUrl(data.u) };
   } catch {
     return null;
   }

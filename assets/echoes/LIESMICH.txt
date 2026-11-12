@@ -1,0 +1,8 @@
+﻿Lege hier deine MP3-Dateien hinein (auch .m4a, .wav, .aac).
+Der Dateiname wird der Name des Echos in der App, z. B. "Die Stimme im Keller.mp3".
+
+Danach im Terminal:  npm run echoes
+-> baut die Dateien in die App ein und erstellt im Ordner qr-codes/ die QR-Codes
+   (qr-codes/drucken.html zum Ausdrucken).
+
+Wichtig: Dateinamen nach dem Drucken nicht mehr ändern, sonst passt der QR-Code nicht mehr.

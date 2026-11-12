@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAudio } from '@/AudioContext';
 import { readCode, signedCodesOnly } from '@/codes';
-import { BLOCKED_MESSAGE, colors, fonts, glowShadow } from '@/theme';
+import { BLOCKED_MESSAGE, colors, fonts, glowShadow, MISSING_MESSAGE } from '@/theme';
 
 type Mode = 'lauschen' | 'loesen';
 
@@ -23,7 +23,8 @@ export default function Header({ mode, compact }: { mode: Mode; compact?: boolea
       (text) => {
         if (!text?.trim()) return;
         const result = readCode(text);
-        if (result.ok) openEcho(result.url, result.title);
+        if (result.ok) openEcho(result.source, result.title);
+        else if (result.reason === 'missing') Alert.alert('Echo noch nicht verfügbar', MISSING_MESSAGE);
         else if (result.reason === 'no-link' && !signedCodesOnly)
           Alert.alert('Ungültiger Link', 'Der Link muss mit http:// oder https:// beginnen.');
         else Alert.alert(signedCodesOnly ? 'Ungültiger Code' : 'Unbekannter Link', BLOCKED_MESSAGE);

@@ -16,6 +16,20 @@ The UI is in German, with a dark style and glowing controls, built with Expo Rou
 - Plays when the silent switch is on, keeps playing in the background, and shows lock-screen / Control Center controls.
 - iPad: works in every orientation and in Split View.
 
+## MP3s from your PC (built into the app)
+You don't need a website or Dropbox for this:
+1. Put your MP3 files into the folder `assets/echoes/`. The file name becomes the echo's name, e.g. `Die Stimme im Keller.mp3`.
+2. Run `npm run echoes`.
+3. Open `qr-codes/drucken.html` and print it with Ctrl+P. Each code is also in `qr-codes/` as a PNG.
+
+The MP3s are built into the app, so they play straight away and without internet. The QR codes are signed, just like the online ones.
+
+Things to know:
+- **New or changed MP3s need an app update.** In Expo Go, press `r` in the terminal to reload. Players need a new build, or an over-the-air update with `npx eas-cli@latest update`. If someone scans a code for an MP3 their app doesn't have yet, they see "Dieses Echo ist in deiner App-Version noch nicht enthalten. Bitte aktualisiere die App."
+- **Don't rename a file after printing its code.** The code refers to the file name.
+- **App size:** every MP3 makes the app bigger. A few dozen short clips are fine.
+- `npm run echoes` rewrites `src/bundledEchoes.ts` and the `qr-codes/` folder each time. Don't edit them by hand.
+
 ## Only your own QR codes (signed codes)
 Echoes only plays QR codes that you made with your own generator. Plain MP3 links, other people's QR codes and copied or changed codes are rejected with "Dieser QR-Code gehört nicht zu Echoes."
 

@@ -1,17 +1,24 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Directory, File, Paths } from 'expo-file-system';
 
+import { BUNDLED_ECHOES } from './bundledEchoes';
+
 export type Track = {
   id: string;
   title: string;
   /** Remote URL (from a QR code or typed in). */
   url?: string;
+  /** Id of an MP3 built into the app (from assets/echoes/, see src/bundledEchoes.ts). */
+  asset?: string;
   /** File name inside the app's audio folder, once the MP3 has been saved for offline use. */
   fileName?: string;
   addedAt: number;
 };
 
-const STORAGE_KEY = 'qr-audio/library/v1';
+/** Where an echo's audio comes from: an online link, or an MP3 built into the app. */
+export type EchoSource = { url: string } | { asset: string };
+
+const STORAGE_KEY ='qr-audio/library/v1';
 
 // The absolute path of the Documents folder can change between app updates on iOS,
 // so we store only the file name and work out the full path each time we need it.
@@ -21,7 +28,9 @@ function audioDir(): Directory {
   return dir;
 }
 
-export function playableUri(track: Track): string | null {
+/** What to hand the audio player: a built-in MP3, a saved file, or the online link. */
+export function playableSource(track: Track): number | string | null {
+  if (track.asset) return BUNDLED_ECHOES[track.asset] ?? null;
   if (track.fileName) {
     const f = new File(audioDir(), track.fileName);
     if (f.exists) return f.uri;
@@ -30,6 +39,7 @@ export function playableUri(track: Track): string | null {
 }
 
 export function isOffline(track: Track): boolean {
+  if (track.asset) return track.asset in BUNDLED_ECHOES;
   return !!track.fileName && new File(audioDir(), track.fileName).exists;
 }
 

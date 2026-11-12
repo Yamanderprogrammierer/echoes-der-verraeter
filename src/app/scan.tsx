@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAudio } from '@/AudioContext';
 import { readCode, signedCodesOnly } from '@/codes';
-import { BLOCKED_MESSAGE, colors, fonts, glowShadow } from '@/theme';
+import { BLOCKED_MESSAGE, colors, fonts, glowShadow, MISSING_MESSAGE } from '@/theme';
 
 function close() {
   if (router.canGoBack()) router.back();
@@ -50,14 +50,16 @@ export default function ScanScreen() {
       const result = readCode(data);
       if (!result.ok) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-        if (result.reason === 'no-link' && !signedCodesOnly) {
+        if (result.reason === 'missing') {
+          Alert.alert('Echo noch nicht verfügbar', MISSING_MESSAGE, unlockAfterOk);
+        } else if (result.reason === 'no-link' && !signedCodesOnly) {
           Alert.alert('Kein Audio-Link', `Dieser QR-Code enthält:\n\n${data}`, unlockAfterOk);
         } else {
           Alert.alert('Unbekannter QR-Code', BLOCKED_MESSAGE, unlockAfterOk);
         }
         return;
       }
-      openEcho(result.url, result.title);
+      openEcho(result.source, result.title);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       close();
     },

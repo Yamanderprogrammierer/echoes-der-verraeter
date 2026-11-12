@@ -14,7 +14,8 @@ import {
   loadLastSession,
   loadLibrary,
   newId,
-  playableUri,
+  EchoSource,
+  playableSource,
   saveLastSession,
   saveLibrary,
   Track,
@@ -41,7 +42,7 @@ type AudioCtx = {
   togglePlay: () => void;
   seek: (seconds: number) => void;
   /** Adds an accepted echo (see readCode in codes.ts) to the found echoes and plays it. */
-  openEcho: (url: string, title: string) => void;
+  openEcho: (source: EchoSource, title: string) => void;
   removeTrack: (track: Track) => void;
   resetAll: () => void;
 };
@@ -52,6 +53,11 @@ export function useAudio(): AudioCtx {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error('useAudio must be used inside <AudioProvider>');
   return ctx;
+}
+
+/** A built-in MP3 is passed as its module number, everything else as a uri. */
+function toAudioSource(source: number | string) {
+  return typeof source === 'number' ? source : { uri: source };
 }
 
 function showOnLockScreen(player: AudioPlayer, track: Track) {
@@ -105,9 +111,9 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       if (last) setRate(last.rate);
       if (track && last) {
         pendingSeek.current = last.position > 1 ? last.position : null;
-        const uri = playableUri(track);
-        if (uri) {
-          player.replace({ uri });
+        const source = playableSource(track);
+        if (source !== null) {
+          player.replace(toAudioSource(source));
           setCurrent(track);
           showOnLockScreen(player, track);
         }
@@ -167,12 +173,12 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
   const load = useCallback(
     (track: Track) => {
-      const uri = playableUri(track);
-      if (!uri) return;
+      const source = playableSource(track);
+      if (source === null) return;
       setTimedOut(false);
       setLoadToken((n) => n + 1);
       pendingSeek.current = null;
-      player.replace({ uri });
+      player.replace(toAudioSource(source));
       player.play();
       setCurrent(track);
       showOnLockScreen(player, track);
@@ -228,16 +234,19 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const openEcho = useCallback(
-    (url: string, title: string) => {
-      let track = libraryRef.current.find((t) => t.url === url);
+    (source: EchoSource, title: string) => {
+      let track = libraryRef.current.find((t) =>
+        'asset' in source ? t.asset === source.asset : t.url === source.url,
+      );
       if (!track) {
-        track = { id: newId(), title, url, addedAt: Date.now() };
+        track = { id: newId(), title, ...source, addedAt: Date.now() };
         const added = track;
         setLibrary((prev) => [added, ...prev]);
       }
       // Don't restart an echo that is already playing.
       if (!(current?.id === track.id && status.playing)) play(track);
-      if (!track.fileName) saveOffline(track);
+      // Built-in MP3s are already on the device; online ones get saved in the background.
+      if (track.url && !track.fileName) saveOffline(track);
     },
     [current, status.playing, play, saveOffline],
   );

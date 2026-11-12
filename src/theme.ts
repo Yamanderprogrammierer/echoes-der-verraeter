@@ -36,6 +36,7 @@ export function formatTime(seconds: number): string {
 }
 
 export const BLOCKED_MESSAGE = 'Dieser QR-Code gehört nicht zu Echoes.';
+export const MISSING_MESSAGE = 'Dieses Echo ist in deiner App-Version noch nicht enthalten. Bitte aktualisiere die App.';
 
 /** Pulls the first http(s) link out of scanned or typed text. */
 export function extractUrl(data: string): string | null {
