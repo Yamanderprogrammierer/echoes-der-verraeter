@@ -83,7 +83,7 @@ The app ID (`ios.bundleIdentifier` in `app.json`) is `de.pascal.echoesderverraet
 - **Privacy policy**: [`docs/datenschutz.md`](docs/datenschutz.md) is a German draft. Fill in the `[…]` placeholders, put it online (e.g. on your website or GitHub Pages), and enter the link in App Store Connect. It isn't legal advice, so have it checked if you're unsure.
 - **App Privacy ("Datenschutz-Etiketten")** in App Store Connect: the app collects no data, so "Keine Daten erfasst" applies, as long as you don't add analytics later.
 - **Screenshots**: at least one set for the 6.9" iPhone (1320 × 2868 or 1290 × 2796) and, because the app supports iPad, one for the 13" iPad (2064 × 2752 or 2048 × 2732). Screenshots from the iOS Simulator for those devices have the right size.
-- **App ID**: see "Build" above. It must be your own before the first upload.
+- **App ID**: `de.pascal.echoesderverraeter` (see "Build" above). It's set and must not change after the first upload.
 
 ## App icon and splash screen
 `assets/icon.png` (app icon), `assets/splash-icon.png` (splash screen) and `assets/android-icon-foreground.png` show the glowing echo button on black. Replace them with your own 1024×1024 PNGs any time.
