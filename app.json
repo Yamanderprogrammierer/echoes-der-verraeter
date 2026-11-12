@@ -2,7 +2,11 @@
   "expo": {
     "name": "Echoes-Der Verräter",
     "slug": "qr-audio-player",
+    "owner": "pascalll69",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "default",
     "icon": "./assets/icon.png",
     "scheme": "echoes",
@@ -66,6 +70,14 @@
       "expo-router",
       "expo-font",
       "expo-asset"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "0423b2e2-1e7a-410d-af81-103334e63acc"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/0423b2e2-1e7a-410d-af81-103334e63acc"
+    }
   }
 }

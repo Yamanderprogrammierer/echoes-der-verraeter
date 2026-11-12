@@ -4,11 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Echoes QR-Generator</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl/1.0.3/nacl-fast.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<!-- Everything is loaded from tools/vendor, so the page also works without internet. -->
+<script src="vendor/nacl-fast.min.js"></script>
+<script src="vendor/qrcode.min.js"></script>
 <style>
+  @font-face { font-family: Quicksand; font-weight: 500; src: url("vendor/Quicksand_500Medium.ttf") format("truetype"); }
+  @font-face { font-family: Quicksand; font-weight: 600; src: url("vendor/Quicksand_600SemiBold.ttf") format("truetype"); }
+  @font-face { font-family: Quicksand; font-weight: 700; src: url("vendor/Quicksand_700Bold.ttf") format("truetype"); }
   :root {
     --bg: #000; --bg2: #0a0f1a; --text: #fff; --muted: rgba(255,255,255,.6);
     --line: rgba(255,255,255,.16); --surface: rgba(255,255,255,.05);
@@ -234,7 +236,7 @@
 
   window.addEventListener('load', () => {
     if (typeof nacl === 'undefined' || typeof qrcode === 'undefined') {
-      return setStatus($('keyStatus'), 'Die Seite braucht eine Internetverbindung, um zu starten. Bitte neu laden.', false);
+      return setStatus($('keyStatus'), 'Der Ordner tools/vendor fehlt oder ist unvollständig. Die Seite muss im Ordner tools liegen.', false);
     }
     let saved = null;
     try { saved = localStorage.getItem(STORE); } catch {}

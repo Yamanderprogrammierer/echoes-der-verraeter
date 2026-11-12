@@ -1,0 +1,5 @@
+Lokale Kopien für tools/qr-generator.html, damit die Seite ohne Internet funktioniert.
+
+nacl-fast.min.js           tweetnacl 1.0.3 (https://github.com/dchest/tweetnacl-js) - Public Domain (Unlicense)
+qrcode.min.js              qrcode-generator 1.4.4 (https://github.com/kazuhikoarase/qrcode-generator) - MIT-Lizenz
+Quicksand_*.ttf            Quicksand (https://fonts.google.com/specimen/Quicksand) - SIL Open Font License 1.1

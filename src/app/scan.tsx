@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAudio } from '@/AudioContext';
 import { readCode, signedCodesOnly } from '@/codes';
+import { downloadNewEchoes, restartWithUpdate } from '@/updates';
 import { BLOCKED_MESSAGE, colors, fonts, glowShadow, MISSING_MESSAGE } from '@/theme';
 
 function close() {
@@ -35,6 +36,7 @@ export default function ScanScreen() {
   const locked = useRef(false);
   const [torch, setTorch] = useState(false);
   const [readingPhoto, setReadingPhoto] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   // Sized to the smaller side so frame, text and buttons also fit when the phone is sideways.
   const frameSize = Math.round(Math.min(width * 0.6, height * 0.42, 340));
@@ -51,7 +53,20 @@ export default function ScanScreen() {
       if (!result.ok) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
         if (result.reason === 'missing') {
-          Alert.alert('Echo noch nicht verfügbar', MISSING_MESSAGE, unlockAfterOk);
+          // The code is valid, but this echo came with a newer update: try to download it now.
+          setUpdating(true);
+          downloadNewEchoes().then((ready) => {
+            setUpdating(false);
+            if (ready) {
+              Alert.alert(
+                'Neue Echos geladen',
+                'Die App startet kurz neu. Scanne den QR-Code danach noch einmal.',
+                [{ text: 'OK', onPress: restartWithUpdate }],
+              );
+            } else {
+              Alert.alert('Echo noch nicht verfügbar', MISSING_MESSAGE, unlockAfterOk);
+            }
+          });
         } else if (result.reason === 'no-link' && !signedCodesOnly) {
           Alert.alert('Kein Audio-Link', `Dieser QR-Code enthält:\n\n${data}`, unlockAfterOk);
         } else {
@@ -186,7 +201,9 @@ export default function ScanScreen() {
           <View style={[styles.corner, styles.br]} />
         </View>
         <View style={styles.pill} pointerEvents="none">
-          <Text style={styles.pillText}>Richte die Kamera auf einen QR-Code</Text>
+          <Text style={styles.pillText}>
+            {updating ? 'Neue Echos werden geladen …' : 'Richte die Kamera auf einen QR-Code'}
+          </Text>
         </View>
         {/* Under the scan frame, so they aren't hidden behind Expo Go's floating button in the corner. */}
         {actions}
