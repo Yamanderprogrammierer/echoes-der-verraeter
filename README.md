@@ -77,7 +77,7 @@ npx eas-cli@latest build --platform ios --profile preview      # installable tes
 npx eas-cli@latest build --platform ios --profile production   # for TestFlight / App Store
 npx eas-cli@latest submit -p ios
 ```
-The app ID (`ios.bundleIdentifier` in `app.json`) is `de.echoes.app`. It must be unique on the App Store, so change it to something that is yours (e.g. `de.<deinname>.echoes`) before the first build. It can't be changed after the app is published.
+The app ID (`ios.bundleIdentifier` in `app.json`) is `de.pascal.echoesderverraeter`. Don't change it after the first App Store upload; it can't be changed once the app is published.
 
 ## App Store checklist
 - **Privacy policy**: [`docs/datenschutz.md`](docs/datenschutz.md) is a German draft. Fill in the `[…]` placeholders, put it online (e.g. on your website or GitHub Pages), and enter the link in App Store Connect. It isn't legal advice, so have it checked if you're unsure.

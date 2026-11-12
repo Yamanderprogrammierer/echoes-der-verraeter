@@ -14,7 +14,7 @@
     "backgroundColor": "#000000",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "de.echoes.app",
+      "bundleIdentifier": "de.pascal.echoesderverraeter",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDisplayName": "Echoes",
@@ -26,7 +26,7 @@
       }
     },
     "android": {
-      "package": "de.echoes.app",
+      "package": "de.pascal.echoesderverraeter",
       "adaptiveIcon": {
         "backgroundColor": "#000000",
         "foregroundImage": "./assets/android-icon-foreground.png"
