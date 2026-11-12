@@ -8,7 +8,7 @@ import { colors, fonts, glowShadow } from '@/theme';
 
 /** Shown after a QR code was scanned: title, slider, play/pause and 5-second skip buttons. */
 export default function PlayerPanel() {
-  const { current, status, togglePlay, seek, loadError, retry } = useAudio();
+  const { current, status, togglePlay, seek, loadError, retry, rate, setRate } = useAudio();
   const { width, height } = useWindowDimensions();
   const landscape = width > height;
   if (!current) return null;
@@ -65,11 +65,24 @@ export default function PlayerPanel() {
 
   const slider = <SeekBar position={status.currentTime} duration={status.duration} onSeek={seek} />;
 
+  const nextRate = SPEEDS[(SPEEDS.indexOf(rate) + 1) % SPEEDS.length] ?? 1;
+
   return (
     <View style={styles.panel}>
-      <Text style={styles.title} numberOfLines={1}>
-        {current.title}
-      </Text>
+      <View style={styles.titleRow}>
+        <Text style={[styles.title, styles.titleFlex]} numberOfLines={1}>
+          {current.title}
+        </Text>
+        <Pressable
+          onPress={() => setRate(nextRate)}
+          hitSlop={8}
+          style={({ pressed }) => [styles.speed, rate !== 1 && styles.speedActive, pressed && { opacity: 0.7 }]}
+          accessibilityRole="button"
+          accessibilityLabel={`Geschwindigkeit ${speedLabel(rate)}, tippen für ${speedLabel(nextRate)}`}
+        >
+          <Text style={styles.speedText}>{speedLabel(rate)}</Text>
+        </Pressable>
+      </View>
       {landscape ? (
         // Little height in landscape: buttons and slider share one row.
         <View style={styles.row}>
@@ -87,6 +100,12 @@ export default function PlayerPanel() {
 }
 
 const SKIP_SECONDS = 5;
+/** Tapping the speed button cycles through these. */
+const SPEEDS = [1, 0.75, 0.5];
+
+function speedLabel(rate: number): string {
+  return `${String(rate).replace('.', ',')}×`;
+}
 
 function SkipButton({
   icon,
@@ -128,6 +147,19 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.text, fontFamily: fonts.bold, fontSize: 17, marginBottom: 6, marginLeft: 2 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  titleFlex: { flex: 1, marginBottom: 0 },
+  speed: {
+    minWidth: 54,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  speedActive: { borderColor: colors.text, boxShadow: glowShadow },
+  speedText: { color: colors.text, fontFamily: fonts.bold, fontSize: 14, fontVariant: ['tabular-nums'] },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 22, paddingBottom: 6 },
   skip: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   errorPanel: { borderColor: 'rgba(255,107,107,0.45)', paddingBottom: 14, gap: 10 },

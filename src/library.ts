@@ -66,6 +66,27 @@ export async function saveLibrary(tracks: Track[]): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(tracks));
 }
 
+export type LastSession = { id: string; position: number; rate: number };
+const LAST_KEY = 'echoes/last-session/v1';
+
+/** The echo that was open when the app was last used, where it stopped, and the speed. */
+export async function loadLastSession(): Promise<LastSession | null> {
+  try {
+    const raw = await AsyncStorage.getItem(LAST_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Partial<LastSession>;
+    if (typeof s.id !== 'string') return null;
+    return { id: s.id, position: Number(s.position) || 0, rate: Number(s.rate) || 1 };
+  } catch {
+    return null;
+  }
+}
+
+export function saveLastSession(session: LastSession | null): void {
+  const op = session ? AsyncStorage.setItem(LAST_KEY, JSON.stringify(session)) : AsyncStorage.removeItem(LAST_KEY);
+  op.catch(() => {});
+}
+
 /** Downloads a remote track into the app so it also plays without a connection. */
 export async function downloadTrack(track: Track): Promise<Track> {
   if (!track.url) return track;

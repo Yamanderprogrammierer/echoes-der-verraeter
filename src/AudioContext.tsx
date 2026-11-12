@@ -12,9 +12,11 @@ import {
   deleteTrackFile,
   downloadTrack,
   isOffline,
+  loadLastSession,
   loadLibrary,
   newId,
   playableUri,
+  saveLastSession,
   saveLibrary,
   titleFromUrl,
   Track,
@@ -34,6 +36,9 @@ type AudioCtx = {
   loadError: string | null;
   /** Ids of tracks that are being saved for offline use right now. */
   downloading: Record<string, boolean>;
+  /** Playback speed, 1 = normal. */
+  rate: number;
+  setRate: (rate: number) => void;
   play: (track: Track) => void;
   retry: () => void;
   togglePlay: () => void;
@@ -51,7 +56,25 @@ export function useAudio(): AudioCtx {
   return ctx;
 }
 
-const LOAD_ERROR = 'Das Audio konnte nicht geladen werden. Prüfe deine Internetverbindung oder den QR-Code.';
+function showOnLockScreen(player: AudioPlayer, track: Track) {
+  try {
+    player.setActiveForLockScreen(
+      true,
+      { title: track.title, artist: 'Echoes' },
+      {
+        showSeekBackward: true,
+        showSeekForward: true,
+        // Same 5-second jumps as the buttons in the app.
+        seekBackwardIntervalSeconds: 5,
+        seekForwardIntervalSeconds: 5,
+      },
+    );
+  } catch {
+    // Lock screen controls aren't available in every environment (e.g. Expo Go).
+  }
+}
+
+const LOAD_ERROR ='Das Audio konnte nicht geladen werden. Prüfe deine Internetverbindung oder den QR-Code.';
 
 export function AudioProvider({ children }: { children: React.ReactNode }) {
   const player = useAudioPlayer(null, { updateInterval: 250 });
@@ -64,6 +87,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   // Changes on every (re)load so the timeout below restarts even for the same track.
   const [loadToken, setLoadToken] = useState(0);
   const libraryRef = useRef<Track[]>([]);
+  const [rate, setRate] = useState(1);
+  const pendingSeek = useRef<number | null>(null);
 
   // Play even when the silent switch is on, and keep playing in the background / lock screen.
   useEffect(() => {
@@ -74,12 +99,51 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
   }, []);
 
+  // Load the found echoes, then reopen the last echo where the player left off (paused).
   useEffect(() => {
-    loadLibrary().then((tracks) => {
+    Promise.all([loadLibrary(), loadLastSession()]).then(([tracks, last]) => {
       setLibrary(tracks);
+      const track = last && tracks.find((t) => t.id === last.id);
+      if (last) setRate(last.rate);
+      if (track && last) {
+        pendingSeek.current = last.position > 1 ? last.position : null;
+        const uri = playableUri(track);
+        if (uri) {
+          player.replace({ uri });
+          setCurrent(track);
+          showOnLockScreen(player, track);
+        }
+      }
       setLoaded(true);
     });
-  }, []);
+  }, [player]);
+
+  // Jump to the remembered position once the reopened echo has loaded.
+  useEffect(() => {
+    if (status.isLoaded && pendingSeek.current !== null) {
+      player.seekTo(pendingSeek.current);
+      pendingSeek.current = null;
+    }
+  }, [status.isLoaded, player]);
+
+  // Remember the echo, position (every few seconds and on pause) and speed.
+  const savedBucket = Math.floor((status.currentTime || 0) / 5);
+  useEffect(() => {
+    if (!loaded) return;
+    if (!current) {
+      saveLastSession(null);
+      return;
+    }
+    if (pendingSeek.current !== null) return; // not restored yet - keep the old position
+    saveLastSession({ id: current.id, position: player.currentTime || 0, rate });
+  }, [loaded, current, savedBucket, status.playing, rate, player]);
+
+  // Apply the chosen speed whenever audio is playing (also after play from the lock screen).
+  useEffect(() => {
+    if (status.playing && Math.abs((status.playbackRate || 1) - rate) > 0.01) {
+      player.setPlaybackRate(rate, 'high');
+    }
+  }, [status.playing, status.playbackRate, rate, player]);
 
   useEffect(() => {
     libraryRef.current = library;
@@ -109,24 +173,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       if (!uri) return;
       setTimedOut(false);
       setLoadToken((n) => n + 1);
+      pendingSeek.current = null;
       player.replace({ uri });
       player.play();
       setCurrent(track);
-      try {
-        player.setActiveForLockScreen(
-          true,
-          { title: track.title, artist: 'Echoes' },
-          {
-            showSeekBackward: true,
-            showSeekForward: true,
-            // Same 5-second jumps as the buttons in the app.
-            seekBackwardIntervalSeconds: 5,
-            seekForwardIntervalSeconds: 5,
-          },
-        );
-      } catch {
-        // Lock screen controls aren't available in every environment (e.g. Expo Go).
-      }
+      showOnLockScreen(player, track);
     },
     [player],
   );
@@ -218,6 +269,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       library,
       loadError,
       downloading,
+      rate,
+      setRate,
       play,
       retry,
       togglePlay,
@@ -225,7 +278,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       openLink,
       removeTrack,
     }),
-    [player, status, current, library, loadError, downloading, play, retry, togglePlay, seek, openLink, removeTrack],
+    [player, status, current, library, loadError, downloading, rate, play, retry, togglePlay, seek, openLink, removeTrack],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -13,6 +13,7 @@
       "bundleIdentifier": "de.echoes.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDisplayName": "Echoes",
         "CFBundleDevelopmentRegion": "de",
         "CFBundleLocalizations": ["de"],
         "NSAppTransportSecurity": {

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BarcodeScanningResult, CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,6 +20,7 @@ export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const { openLink } = useAudio();
   const locked = useRef(false);
+  const [torch, setTorch] = useState(false);
 
   const onScanned = useCallback(
     ({ data }: BarcodeScanningResult) => {
@@ -85,6 +86,7 @@ export default function ScanScreen() {
       <CameraView
         style={StyleSheet.absoluteFill}
         facing="back"
+        enableTorch={torch}
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         onBarcodeScanned={onScanned}
       />
@@ -103,6 +105,21 @@ export default function ScanScreen() {
       </View>
 
       {closeButton}
+      <Pressable
+        onPress={() => setTorch((on) => !on)}
+        style={({ pressed }) => [
+          styles.close,
+          { top: insets.top + 12, right: insets.right + 16 },
+          torch && styles.torchOn,
+          pressed && { opacity: 0.7 },
+        ]}
+        accessibilityRole="switch"
+        accessibilityLabel="Taschenlampe"
+        accessibilityState={{ checked: torch }}
+        hitSlop={8}
+      >
+        <Ionicons name={torch ? 'flashlight' : 'flashlight-outline'} size={22} color={torch ? '#000' : colors.text} />
+      </Pressable>
     </View>
   );
 }
@@ -139,6 +156,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     boxShadow: glowShadow,
   },
+  torchOn: { backgroundColor: '#E8F9FF', borderColor: '#E8F9FF' },
   permTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 24 },
   permBody: { color: colors.muted, fontFamily: fonts.medium, fontSize: 15, textAlign: 'center', maxWidth: 380 },
   permButton: {
