@@ -6,7 +6,7 @@ export type Track = {
   title: string;
   /** Remote URL (from a QR code or typed in). */
   url?: string;
-  /** File name inside the app's audio folder (imported from Files or saved offline). */
+  /** File name inside the app's audio folder, once the MP3 has been saved for offline use. */
   fileName?: string;
   addedAt: number;
 };
@@ -66,20 +66,7 @@ export async function saveLibrary(tracks: Track[]): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(tracks));
 }
 
-/** Copies a file picked from the Files app into the app so it can still be played later. */
-export async function importPickedFile(uri: string, name: string): Promise<Track> {
-  const fileName = safeFileName(name);
-  const dest = new File(audioDir(), fileName);
-  await new File(uri).copy(dest);
-  return {
-    id: newId(),
-    title: name.replace(/\.[^.]+$/, ''),
-    fileName,
-    addedAt: Date.now(),
-  };
-}
-
-/** Downloads a remote track so it plays without a connection. */
+/** Downloads a remote track into the app so it also plays without a connection. */
 export async function downloadTrack(track: Track): Promise<Track> {
   if (!track.url) return track;
   const fileName = safeFileName(`${track.title}.mp3`);

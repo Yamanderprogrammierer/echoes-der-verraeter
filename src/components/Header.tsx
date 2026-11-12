@@ -5,14 +5,14 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAudio } from '@/AudioContext';
-import { colors, extractUrl, fonts, glowShadow } from '@/theme';
+import { BLOCKED_MESSAGE, colors, extractUrl, fonts, glowShadow } from '@/theme';
 
 type Mode = 'lauschen' | 'loesen';
 
 /** "Echoes" title plus the row with play button, Lauschen/Lösen switch and keyboard button. */
 export default function Header({ mode, compact }: { mode: Mode; compact?: boolean }) {
   const insets = useSafeAreaInsets();
-  const { current, status, togglePlay, addUrl, play } = useAudio();
+  const { current, status, togglePlay, openLink } = useAudio();
 
   const enterLink = () => {
     Alert.prompt(
@@ -20,8 +20,11 @@ export default function Header({ mode, compact }: { mode: Mode; compact?: boolea
       'Füge die Adresse einer MP3-Datei ein.',
       (text) => {
         const url = extractUrl(text ?? '');
-        if (url) play(addUrl(url));
-        else if (text) Alert.alert('Ungültiger Link', 'Der Link muss mit http:// oder https:// beginnen.');
+        if (!url) {
+          if (text) Alert.alert('Ungültiger Link', 'Der Link muss mit http:// oder https:// beginnen.');
+          return;
+        }
+        if (openLink(url) === 'blocked') Alert.alert('Unbekannter Link', BLOCKED_MESSAGE);
       },
       'plain-text',
       '',

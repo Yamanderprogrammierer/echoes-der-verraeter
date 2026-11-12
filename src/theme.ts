@@ -35,6 +35,8 @@ export function formatTime(seconds: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 }
 
+export const BLOCKED_MESSAGE = 'Dieser Link gehört nicht zu Echoes.';
+
 /** Pulls the first http(s) link out of scanned or typed text. */
 export function extractUrl(data: string): string | null {
   const match = data.trim().match(/https?:\/\/[^\s"'<>]+/i);

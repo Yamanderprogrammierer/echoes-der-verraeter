@@ -1,30 +1,30 @@
 {
   "expo": {
-    "name": "QR Audio",
+    "name": "Echoes",
     "slug": "qr-audio-player",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
-    "scheme": "qraudio",
+    "scheme": "echoes",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#000000",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.example.qraudio",
+      "bundleIdentifier": "de.echoes.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDevelopmentRegion": "de",
+        "CFBundleLocalizations": ["de"],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoadsForMedia": true
         }
       }
     },
     "android": {
-      "package": "com.example.qraudio",
+      "package": "de.echoes.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/android-icon-foreground.png"
       }
     },
     "web": {
@@ -34,7 +34,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "QR Audio nutzt die Kamera, um QR-Codes mit Audio-Links zu scannen.",
+          "cameraPermission": "Echoes nutzt die Kamera, um QR-Codes mit Audio-Links zu scannen.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
@@ -46,7 +46,14 @@
           "enableBackgroundPlayback": true
         }
       ],
-      "expo-document-picker",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#000000",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180
+        }
+      ],
       "expo-router",
       "expo-font",
       "expo-asset"

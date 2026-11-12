@@ -1,37 +1,46 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BarcodeScanningResult, CameraView, useCameraPermissions } from 'expo-camera';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useCallback, useRef } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAudio } from '@/AudioContext';
-import { colors, extractUrl, fonts, glowShadow } from '@/theme';
+import { BLOCKED_MESSAGE, colors, extractUrl, fonts, glowShadow } from '@/theme';
+
+function close() {
+  if (router.canGoBack()) router.back();
+  else router.replace('/');
+}
 
 /** Full-screen camera; it only runs while this screen is open. */
 export default function ScanScreen() {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
-  const { addUrl, play } = useAudio();
+  const { openLink } = useAudio();
   const locked = useRef(false);
-
-  const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   const onScanned = useCallback(
     ({ data }: BarcodeScanningResult) => {
       if (locked.current) return;
       locked.current = true;
+      const unlockAfterOk = [{ text: 'OK', onPress: () => setTimeout(() => (locked.current = false), 800) }];
       const url = extractUrl(data);
       if (!url) {
-        Alert.alert('Kein Audio-Link', `Dieser QR-Code enthält:\n\n${data}`, [
-          { text: 'OK', onPress: () => setTimeout(() => (locked.current = false), 800) },
-        ]);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+        Alert.alert('Kein Audio-Link', `Dieser QR-Code enthält:\n\n${data}`, unlockAfterOk);
         return;
       }
-      play(addUrl(url));
-      router.back();
+      if (openLink(url) === 'blocked') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+        Alert.alert('Unbekannter QR-Code', BLOCKED_MESSAGE, unlockAfterOk);
+        return;
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      close();
     },
-    [addUrl, play],
+    [openLink],
   );
 
   const closeButton = (

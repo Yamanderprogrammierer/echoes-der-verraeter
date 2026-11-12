@@ -5,12 +5,13 @@ import {
   useAudioPlayer,
   useAudioPlayerStatus,
 } from 'expo-audio';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Alert } from 'react-native';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { isAllowedUrl } from './config';
 import {
   deleteTrackFile,
   downloadTrack,
+  isOffline,
   loadLibrary,
   newId,
   playableUri,
@@ -19,21 +20,27 @@ import {
   Track,
 } from './library';
 
+/** How long an MP3 may take to start loading before we show an error. */
+const LOAD_TIMEOUT_MS = 20000;
+
+export type OpenResult = 'ok' | 'blocked';
+
 type AudioCtx = {
   player: AudioPlayer;
   status: AudioStatus;
   current: Track | null;
   library: Track[];
-  play: (track: Track) => void;
-  togglePlay: () => void;
-  skip: (seconds: number) => void;
-  seek: (seconds: number) => void;
-  addUrl: (url: string, title?: string) => Track;
-  addTracks: (tracks: Track[]) => void;
-  removeTrack: (track: Track) => void;
-  renameTrack: (track: Track, title: string) => void;
-  saveOffline: (track: Track) => Promise<void>;
+  /** German error message when the current MP3 could not be loaded. */
+  loadError: string | null;
+  /** Ids of tracks that are being saved for offline use right now. */
   downloading: Record<string, boolean>;
+  play: (track: Track) => void;
+  retry: () => void;
+  togglePlay: () => void;
+  seek: (seconds: number) => void;
+  /** Adds a scanned or typed link to the found echoes and plays it. */
+  openLink: (url: string) => OpenResult;
+  removeTrack: (track: Track) => void;
 };
 
 const Ctx = createContext<AudioCtx | null>(null);
@@ -44,6 +51,8 @@ export function useAudio(): AudioCtx {
   return ctx;
 }
 
+const LOAD_ERROR = 'Das Audio konnte nicht geladen werden. Prüfe deine Internetverbindung oder den QR-Code.';
+
 export function AudioProvider({ children }: { children: React.ReactNode }) {
   const player = useAudioPlayer(null, { updateInterval: 250 });
   const status = useAudioPlayerStatus(player);
@@ -51,6 +60,10 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [library, setLibrary] = useState<Track[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [downloading, setDownloading] = useState<Record<string, boolean>>({});
+  const [timedOut, setTimedOut] = useState(false);
+  // Changes on every (re)load so the timeout below restarts even for the same track.
+  const [loadToken, setLoadToken] = useState(0);
+  const libraryRef = useRef<Track[]>([]);
 
   // Play even when the silent switch is on, and keep playing in the background / lock screen.
   useEffect(() => {
@@ -69,6 +82,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    libraryRef.current = library;
     if (loaded) saveLibrary(library).catch(() => {});
   }, [library, loaded]);
 
@@ -80,32 +94,48 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
   }, [status.didJustFinish, player]);
 
-  const play = useCallback(
+  // If the MP3 hasn't loaded after a while, treat it as failed.
+  useEffect(() => {
+    if (!current || status.isLoaded) return;
+    const timer = setTimeout(() => setTimedOut(true), LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [current, status.isLoaded, loadToken]);
+
+  const loadError = current && (status.error || (timedOut && !status.isLoaded)) ? LOAD_ERROR : null;
+
+  const load = useCallback(
     (track: Track) => {
       const uri = playableUri(track);
-      if (!uri) {
-        Alert.alert('Abspielen nicht möglich', 'Zu diesem Audio gibt es keine Datei und keinen Link.');
-        return;
-      }
-      if (current?.id === track.id && status.isLoaded) {
-        player.play();
-        return;
-      }
+      if (!uri) return;
+      setTimedOut(false);
+      setLoadToken((n) => n + 1);
       player.replace({ uri });
       player.play();
       setCurrent(track);
       try {
         player.setActiveForLockScreen(
           true,
-          { title: track.title, artist: 'QR Audio' },
+          { title: track.title, artist: 'Echoes' },
           { showSeekBackward: true, showSeekForward: true },
         );
       } catch {
         // Lock screen controls aren't available in every environment (e.g. Expo Go).
       }
     },
-    [player, current, status.isLoaded],
+    [player],
   );
+
+  const play = useCallback(
+    (track: Track) => {
+      if (current?.id === track.id && status.isLoaded && !status.error) player.play();
+      else load(track);
+    },
+    [player, current, status.isLoaded, status.error, load],
+  );
+
+  const retry = useCallback(() => {
+    if (current) load(current);
+  }, [current, load]);
 
   const togglePlay = useCallback(() => {
     if (!current) return;
@@ -121,25 +151,43 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     [player, status.duration],
   );
 
-  const skip = useCallback(
-    (delta: number) => seek((status.currentTime || 0) + delta),
-    [seek, status.currentTime],
-  );
-
-  const addUrl = useCallback(
-    (url: string, title?: string): Track => {
-      const existing = library.find((t) => t.url === url);
-      if (existing) return existing;
-      const track: Track = { id: newId(), title: title || titleFromUrl(url), url, addedAt: Date.now() };
-      setLibrary((prev) => [track, ...prev]);
-      return track;
-    },
-    [library],
-  );
-
-  const addTracks = useCallback((tracks: Track[]) => {
-    setLibrary((prev) => [...tracks, ...prev]);
+  /** Saves the MP3 on the device in the background; failures are silent (it still streams). */
+  const saveOffline = useCallback(async (track: Track) => {
+    if (!track.url || isOffline(track)) return;
+    setDownloading((d) => ({ ...d, [track.id]: true }));
+    try {
+      const updated = await downloadTrack(track);
+      if (libraryRef.current.some((t) => t.id === track.id)) {
+        setLibrary((prev) => prev.map((t) => (t.id === track.id ? { ...t, fileName: updated.fileName } : t)));
+      } else {
+        deleteTrackFile(updated); // deleted while downloading
+      }
+    } catch {
+      // No connection or not a downloadable file - the echo still plays online.
+    } finally {
+      setDownloading((d) => {
+        const { [track.id]: _, ...rest } = d;
+        return rest;
+      });
+    }
   }, []);
+
+  const openLink = useCallback(
+    (url: string): OpenResult => {
+      if (!isAllowedUrl(url)) return 'blocked';
+      let track = libraryRef.current.find((t) => t.url === url);
+      if (!track) {
+        track = { id: newId(), title: titleFromUrl(url), url, addedAt: Date.now() };
+        const added = track;
+        setLibrary((prev) => [added, ...prev]);
+      }
+      // Don't restart an echo that is already playing.
+      if (!(current?.id === track.id && status.playing)) play(track);
+      if (!track.fileName) saveOffline(track);
+      return 'ok';
+    },
+    [current, status.playing, play, saveOffline],
+  );
 
   const removeTrack = useCallback(
     (track: Track) => {
@@ -156,46 +204,22 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     [current, player],
   );
 
-  const renameTrack = useCallback((track: Track, title: string) => {
-    const clean = title.trim();
-    if (!clean) return;
-    setLibrary((prev) => prev.map((t) => (t.id === track.id ? { ...t, title: clean } : t)));
-    setCurrent((c) => (c?.id === track.id ? { ...c, title: clean } : c));
-  }, []);
-
-  const saveOffline = useCallback(async (track: Track) => {
-    setDownloading((d) => ({ ...d, [track.id]: true }));
-    try {
-      const updated = await downloadTrack(track);
-      setLibrary((prev) => prev.map((t) => (t.id === track.id ? updated : t)));
-    } catch (e) {
-      Alert.alert('Download fehlgeschlagen',e instanceof Error ? e.message : String(e));
-    } finally {
-      setDownloading((d) => {
-        const { [track.id]: _, ...rest } = d;
-        return rest;
-      });
-    }
-  }, []);
-
   const value = useMemo(
     () => ({
       player,
       status,
       current,
       library,
-      play,
-      togglePlay,
-      skip,
-      seek,
-      addUrl,
-      addTracks,
-      removeTrack,
-      renameTrack,
-      saveOffline,
+      loadError,
       downloading,
+      play,
+      retry,
+      togglePlay,
+      seek,
+      openLink,
+      removeTrack,
     }),
-    [player, status, current, library, play, togglePlay, skip, seek, addUrl, addTracks, removeTrack, renameTrack, saveOffline, downloading],
+    [player, status, current, library, loadError, downloading, play, retry, togglePlay, seek, openLink, removeTrack],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
