@@ -1,14 +1,16 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useAudio } from '@/AudioContext';
 import SeekBar from '@/components/SeekBar';
 import { colors, fonts, glowShadow } from '@/theme';
 
-/** Shown after a QR code was scanned: title, play/pause and the slider. */
+/** Shown after a QR code was scanned: title, slider, play/pause and 5-second skip buttons. */
 export default function PlayerPanel() {
   const { current, status, togglePlay, seek, loadError, retry } = useAudio();
+  const { width, height } = useWindowDimensions();
+  const landscape = width > height;
   if (!current) return null;
 
   const loading = status.playing && (!status.isLoaded || status.isBuffering);
@@ -35,33 +37,80 @@ export default function PlayerPanel() {
     );
   }
 
+  const canSkip = status.isLoaded && status.duration > 0;
+  const skip = (delta: number) => seek((status.currentTime || 0) + delta);
+
+  const controls = (
+    <View style={styles.controls}>
+      <SkipButton icon="rewind-5" label="5 Sekunden zurück" disabled={!canSkip} onPress={() => skip(-SKIP_SECONDS)} />
+      <Pressable
+        onPress={togglePlay}
+        style={({ pressed }) => [styles.play, pressed && { transform: [{ scale: 0.94 }] }]}
+        accessibilityLabel={status.playing ? 'Pause' : 'Abspielen'}
+      >
+        {loading ? (
+          <ActivityIndicator color={colors.text} />
+        ) : (
+          <Ionicons
+            name={status.playing ? 'pause' : 'play'}
+            size={24}
+            color={colors.text}
+            style={!status.playing && { marginLeft: 3 }}
+          />
+        )}
+      </Pressable>
+      <SkipButton icon="fast-forward-5" label="5 Sekunden vor" disabled={!canSkip} onPress={() => skip(SKIP_SECONDS)} />
+    </View>
+  );
+
+  const slider = <SeekBar position={status.currentTime} duration={status.duration} onSeek={seek} />;
+
   return (
     <View style={styles.panel}>
       <Text style={styles.title} numberOfLines={1}>
         {current.title}
       </Text>
-      <View style={styles.row}>
-        <Pressable
-          onPress={togglePlay}
-          style={({ pressed }) => [styles.play, pressed && { transform: [{ scale: 0.94 }] }]}
-          accessibilityLabel={status.playing ? 'Pause' : 'Abspielen'}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.text} />
-          ) : (
-            <Ionicons
-              name={status.playing ? 'pause' : 'play'}
-              size={24}
-              color={colors.text}
-              style={!status.playing && { marginLeft: 3 }}
-            />
-          )}
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <SeekBar position={status.currentTime} duration={status.duration} onSeek={seek} />
+      {landscape ? (
+        // Little height in landscape: buttons and slider share one row.
+        <View style={styles.row}>
+          {controls}
+          <View style={{ flex: 1 }}>{slider}</View>
         </View>
-      </View>
+      ) : (
+        <>
+          {slider}
+          {controls}
+        </>
+      )}
     </View>
+  );
+}
+
+const SKIP_SECONDS = 5;
+
+function SkipButton({
+  icon,
+  label,
+  disabled,
+  onPress,
+}: {
+  icon: 'rewind-5' | 'fast-forward-5';
+  label: string;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      style={({ pressed }) => [styles.skip, disabled && { opacity: 0.35 }, pressed && { transform: [{ scale: 0.9 }] }]}
+    >
+      <MaterialCommunityIcons name={icon} size={30} color={colors.text} />
+    </Pressable>
   );
 }
 
@@ -79,6 +128,8 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.text, fontFamily: fonts.bold, fontSize: 17, marginBottom: 6, marginLeft: 2 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
+  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 22, paddingBottom: 6 },
+  skip: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   errorPanel: { borderColor: 'rgba(255,107,107,0.45)', paddingBottom: 14, gap: 10 },
   errorRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   errorText: { flex: 1, color: 'rgba(255,255,255,0.8)', fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },

@@ -22,7 +22,7 @@ export default function ListenScreen() {
   // Leave room for the title, the button row, the hint text, the history button
   // and (after a scan) the player panel.
   const reserved =
-    (landscape ? 230 : 330) + (current ? (landscape ? 80 : 130) : 0) + (hasHistory ? (landscape ? 44 : 56) : 0);
+    (landscape ? 230 : 330) + (current ? (landscape ? 80 : 180) : 0) + (hasHistory ? (landscape ? 44 : 56) : 0);
   const buttonSize = Math.round(Math.max(100, Math.min(width * 0.56, height - reserved, 300)));
 
   return (

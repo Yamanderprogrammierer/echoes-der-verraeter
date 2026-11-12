@@ -116,7 +116,13 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         player.setActiveForLockScreen(
           true,
           { title: track.title, artist: 'Echoes' },
-          { showSeekBackward: true, showSeekForward: true },
+          {
+            showSeekBackward: true,
+            showSeekForward: true,
+            // Same 5-second jumps as the buttons in the app.
+            seekBackwardIntervalSeconds: 5,
+            seekForwardIntervalSeconds: 5,
+          },
         );
       } catch {
         // Lock screen controls aren't available in every environment (e.g. Expo Go).

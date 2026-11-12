@@ -35,7 +35,7 @@ export default function SeekBar({ position, duration, onSeek }: Props) {
         accessibilityLabel="Position im Audio"
         accessibilityValue={{ text: `${formatTime(shown)} von ${formatTime(duration)}` }}
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-        onAccessibilityAction={(e) => onSeek(position + (e.nativeEvent.actionName === 'increment' ? 15 : -15))}
+        onAccessibilityAction={(e) => onSeek(position + (e.nativeEvent.actionName === 'increment' ? 5 : -5))}
       >
         <View style={styles.track} pointerEvents="none">
           <View style={[styles.fill, { width: `${pct * 100}%` }]} />
