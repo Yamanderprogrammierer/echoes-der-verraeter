@@ -37,7 +37,21 @@ export function newId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * Name shown for an echo. A `titel` (or `title`/`name`) value in the link wins, so a QR code like
+ * `https://example.com/echo3.mp3?titel=Die%20Stimme%20im%20Keller` shows "Die Stimme im Keller".
+ * Otherwise the file name is used ("kapitel_3.mp3" -> "kapitel 3").
+ */
 export function titleFromUrl(url: string): string {
+  const named = url.match(/[?&#](?:titel|title|name)=([^&#]+)/i);
+  if (named) {
+    try {
+      const title = decodeURIComponent(named[1].replace(/\+/g, ' ')).trim();
+      if (title) return title.slice(0, 120);
+    } catch {
+      // badly encoded - fall back to the file name
+    }
+  }
   try {
     const path = url.split(/[?#]/)[0];
     const last = decodeURIComponent(path.split('/').filter(Boolean).pop() ?? '');

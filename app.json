@@ -55,6 +55,14 @@
           "imageWidth": 180
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Echoes braucht Zugriff auf deine Fotos, um QR-Codes aus Bildern zu lesen.",
+          "cameraPermission": "Echoes nutzt die Kamera, um QR-Codes mit Audio-Links zu scannen.",
+          "microphonePermission": false
+        }
+      ],
       "expo-router",
       "expo-font",
       "expo-asset"

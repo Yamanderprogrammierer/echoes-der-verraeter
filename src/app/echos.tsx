@@ -16,7 +16,24 @@ function close() {
 /** "Gefundene Echos": every echo scanned so far; tap one to hear it again. */
 export default function EchoesScreen() {
   const insets = useSafeAreaInsets();
-  const { library, current, status, play, removeTrack, downloading } = useAudio();
+  const { library, current, status, play, removeTrack, resetAll, downloading } = useAudio();
+
+  const confirmNewGame = () =>
+    Alert.alert(
+      'Neues Spiel starten?',
+      'Alle gefundenen Echos werden von diesem Gerät gelöscht. Das kann nicht rückgängig gemacht werden.',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Alles löschen',
+          style: 'destructive',
+          onPress: () => {
+            resetAll();
+            close();
+          },
+        },
+      ],
+    );
 
   const confirmDelete = (track: Track) =>
     Alert.alert('Echo löschen?', track.title, [
@@ -49,6 +66,19 @@ export default function EchoesScreen() {
           styles.list,
           { paddingBottom: insets.bottom + 24, paddingLeft: insets.left + 20, paddingRight: insets.right + 20 },
         ]}
+        ListFooterComponent={
+          library.length > 0 ? (
+            <Pressable
+              onPress={confirmNewGame}
+              style={({ pressed }) => [styles.newGame, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityHint="Löscht alle gefundenen Echos"
+            >
+              <Ionicons name="refresh" size={18} color={colors.danger} />
+              <Text style={styles.newGameText}>Neues Spiel starten</Text>
+            </Pressable>
+          ) : undefined
+        }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>Noch keine Echos</Text>
@@ -147,6 +177,18 @@ const styles = StyleSheet.create({
     backgroundImage: 'linear-gradient(90deg, #3a3c42 0%, #55585e 50%, #3a3c42 100%)',
     boxShadow: glowShadow,
   },
+  newGame: {
+    marginTop: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,107,107,0.5)',
+  },
+  newGameText: { color: colors.danger, fontFamily: fonts.bold, fontSize: 16 },
   rowTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 16 },
   rowSub: { color: colors.muted, fontFamily: fonts.medium, fontSize: 13, marginTop: 2 },
 });

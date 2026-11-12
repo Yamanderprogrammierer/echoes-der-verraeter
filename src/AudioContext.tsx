@@ -46,6 +46,7 @@ type AudioCtx = {
   /** Adds a scanned or typed link to the found echoes and plays it. */
   openLink: (url: string) => OpenResult;
   removeTrack: (track: Track) => void;
+  resetAll: () => void;
 };
 
 const Ctx = createContext<AudioCtx | null>(null);
@@ -261,6 +262,20 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     [current, player],
   );
 
+  /** "Neues Spiel": stops playback and removes every found echo (and its saved file) from this device. */
+  const resetAll = useCallback(() => {
+    player.pause();
+    try {
+      player.clearLockScreenControls();
+    } catch {}
+    pendingSeek.current = null;
+    setCurrent(null);
+    setRate(1);
+    libraryRef.current.forEach(deleteTrackFile);
+    libraryRef.current = [];
+    setLibrary([]);
+  }, [player]);
+
   const value = useMemo(
     () => ({
       player,
@@ -277,8 +292,9 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       seek,
       openLink,
       removeTrack,
+      resetAll,
     }),
-    [player, status, current, library, loadError, downloading, rate, play, retry, togglePlay, seek, openLink, removeTrack],
+    [player, status, current, library, loadError, downloading, rate, play, retry, togglePlay, seek, openLink, removeTrack, resetAll],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
