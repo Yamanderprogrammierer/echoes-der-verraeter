@@ -7,7 +7,6 @@ import {
 } from 'expo-audio';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import { isAllowedUrl } from './config';
 import {
   deleteTrackFile,
   downloadTrack,
@@ -18,14 +17,12 @@ import {
   playableUri,
   saveLastSession,
   saveLibrary,
-  titleFromUrl,
   Track,
 } from './library';
 
 /** How long an MP3 may take to start loading before we show an error. */
 const LOAD_TIMEOUT_MS = 20000;
 
-export type OpenResult = 'ok' | 'blocked';
 
 type AudioCtx = {
   player: AudioPlayer;
@@ -43,8 +40,8 @@ type AudioCtx = {
   retry: () => void;
   togglePlay: () => void;
   seek: (seconds: number) => void;
-  /** Adds a scanned or typed link to the found echoes and plays it. */
-  openLink: (url: string) => OpenResult;
+  /** Adds an accepted echo (see readCode in codes.ts) to the found echoes and plays it. */
+  openEcho: (url: string, title: string) => void;
   removeTrack: (track: Track) => void;
   resetAll: () => void;
 };
@@ -230,19 +227,17 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const openLink = useCallback(
-    (url: string): OpenResult => {
-      if (!isAllowedUrl(url)) return 'blocked';
+  const openEcho = useCallback(
+    (url: string, title: string) => {
       let track = libraryRef.current.find((t) => t.url === url);
       if (!track) {
-        track = { id: newId(), title: titleFromUrl(url), url, addedAt: Date.now() };
+        track = { id: newId(), title, url, addedAt: Date.now() };
         const added = track;
         setLibrary((prev) => [added, ...prev]);
       }
       // Don't restart an echo that is already playing.
       if (!(current?.id === track.id && status.playing)) play(track);
       if (!track.fileName) saveOffline(track);
-      return 'ok';
     },
     [current, status.playing, play, saveOffline],
   );
@@ -290,11 +285,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       retry,
       togglePlay,
       seek,
-      openLink,
+      openEcho,
       removeTrack,
       resetAll,
     }),
-    [player, status, current, library, loadError, downloading, rate, play, retry, togglePlay, seek, openLink, removeTrack, resetAll],
+    [player, status, current, library, loadError, downloading, rate, play, retry, togglePlay, seek, openEcho, removeTrack, resetAll],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

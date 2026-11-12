@@ -1,13 +1,13 @@
 # Datenschutzerklärung für die App „Echoes – Der Verräter“
 
-Stand: [DATUM EINTRAGEN]
+Stand: 12.11.2026
 
 ## Verantwortlich
 
-[VOR- UND NACHNAME]
-[STRASSE UND HAUSNUMMER]
-[PLZ UND ORT]
-E-Mail: [E-MAIL-ADRESSE]
+Pascal Schamscha
+Johann-Gerdes-str. 58
+26125, Oldenburg
+E-Mail: pascal.lukas.schamscha08@gmail.com
 
 ## Kurz gesagt
 

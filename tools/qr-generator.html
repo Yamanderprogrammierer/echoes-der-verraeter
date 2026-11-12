@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echoes QR-Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl/1.0.3/nacl-fast.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg: #000; --bg2: #0a0f1a; --text: #fff; --muted: rgba(255,255,255,.6);
+    --line: rgba(255,255,255,.16); --surface: rgba(255,255,255,.05);
+    --glow: 0 0 10px 1px rgba(110,215,255,.35), 0 0 3px 0 rgba(110,215,255,.75);
+    --ok: #3dd68c; --bad: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text); background: linear-gradient(180deg, var(--bg) 55%, var(--bg2));
+    font-family: Quicksand, system-ui, sans-serif; font-weight: 500;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 {
+    text-align: center; font-weight: 700; font-size: clamp(40px, 9vw, 58px); letter-spacing: .15em; margin: 0;
+    text-shadow: 0 0 14px rgba(190,240,255,.85);
+  }
+  .sub { text-align: center; color: var(--muted); margin: 6px 0 32px; font-size: 18px; }
+  section { border: 1.5px solid var(--line); background: var(--surface); border-radius: 18px; padding: 20px; margin-bottom: 20px; }
+  h2 { margin: 0 0 12px; font-size: 20px; }
+  p { line-height: 1.5; }
+  label { display: block; font-weight: 600; margin: 14px 0 6px; }
+  input[type=text], input[type=url] {
+    width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); background: #000;
+    color: var(--text); font: inherit; font-size: 16px;
+  }
+  input:focus { outline: none; border-color: #fff; box-shadow: var(--glow); }
+  button, .button {
+    font: inherit; font-weight: 700; font-size: 16px; color: var(--text); cursor: pointer;
+    padding: 11px 20px; border-radius: 13px; border: 2px solid #fff; background: #000; box-shadow: var(--glow);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  button.primary { background: linear-gradient(90deg, #4a4c52, #6b6e74 50%, #44464c); }
+  button.quiet { border-color: var(--line); box-shadow: none; font-weight: 600; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+  .status { padding: 10px 14px; border-radius: 12px; margin-top: 12px; }
+  .status.ok { border: 1.5px solid rgba(61,214,140,.5); }
+  .status.bad { border: 1.5px solid rgba(255,107,107,.6); }
+  .hint { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+  #result { display: none; text-align: center; }
+  #qr { width: 100%; max-width: 420px; height: auto; border-radius: 12px; margin-top: 8px; }
+  audio { width: 100%; margin-top: 12px; }
+  code { word-break: break-all; font-size: 12px; color: var(--muted); }
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Echoes</h1>
+  <p class="sub">QR-Generator – nur für dich</p>
+
+  <section>
+    <h2>1. Schlüssel laden</h2>
+    <p>Lade einmal deine Schlüssel-Datei <b>tools/echoes-schluessel.json</b>. Der Browser merkt sie sich danach auf diesem PC. Gib die Datei niemals weiter: Wer sie hat, kann Codes für deine App erstellen.</p>
+    <div class="row">
+      <label class="button" for="keyFile" style="margin:0">Schlüssel-Datei wählen</label>
+      <input type="file" id="keyFile" accept=".json,application/json">
+      <button class="quiet" id="forgetKey" hidden>Schlüssel hier vergessen</button>
+    </div>
+    <div id="keyStatus" class="status bad">Noch kein Schlüssel geladen.</div>
+  </section>
+
+  <section>
+    <h2>2. Echo erstellen</h2>
+    <label for="url">Link zur MP3-Datei</label>
+    <input type="url" id="url" placeholder="https://…/echo1.mp3" autocomplete="off">
+    <p class="hint">Der Link muss direkt auf die MP3-Datei zeigen (bei Dropbox mit <b>?dl=1</b> – das wird automatisch korrigiert). Google-Drive-Freigabelinks funktionieren nicht.</p>
+    <label for="title">Name des Echos (wird in der App angezeigt)</label>
+    <input type="text" id="title" placeholder="z. B. Die Stimme im Keller" maxlength="80" autocomplete="off">
+    <div class="row">
+      <button class="primary" id="make" disabled>QR-Code erstellen</button>
+    </div>
+    <div id="formStatus" class="status bad" hidden></div>
+  </section>
+
+  <section id="result">
+    <h2 id="resultTitle">Dein QR-Code</h2>
+    <canvas id="qr"></canvas>
+    <div class="row" style="justify-content:center">
+      <button class="primary" id="download">PNG herunterladen</button>
+      <button class="quiet" id="copy">Code kopieren</button>
+    </div>
+    <p class="hint">Hör kurz rein, ob der Link funktioniert:</p>
+    <audio id="preview" controls preload="none"></audio>
+    <p class="hint">Code-Text (zum Einfügen über die Tastatur-Taste in der App):</p>
+    <code id="codeText"></code>
+  </section>
+</main>
+
+<script>
+  // Must match ECHOES_PUBLIC_KEY in src/config.ts.
+  const APP_PUBLIC_KEY = '6tvL6mOXbDxf5rEpto3pbCP193TR3hcuimCa5LcMESk=';
+  const PREFIX = 'ECHOES1.';
+  const STORE = 'echoes-generator-key';
+  let secretKey = null;
+
+  const $ = (id) => document.getElementById(id);
+  const fromB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const toB64 = (bytes) => btoa(String.fromCharCode(...bytes));
+  const toB64Url = (bytes) => toB64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const ascii = (s) => Uint8Array.from(s, (c) => c.charCodeAt(0));
+
+  function setStatus(el, text, ok) {
+    el.hidden = false;
+    el.textContent = text;
+    el.className = 'status ' + (ok ? 'ok' : 'bad');
+  }
+
+  function useKey(json, remember) {
+    let data;
+    try { data = JSON.parse(json); } catch { throw new Error('Das ist keine gültige Schlüssel-Datei.'); }
+    const sk = data && data.secretKey ? fromB64(data.secretKey) : null;
+    if (!sk || sk.length !== nacl.sign.secretKeyLength) throw new Error('In der Datei fehlt der geheime Schlüssel.');
+    const pk = toB64(nacl.sign.keyPair.fromSecretKey(sk).publicKey);
+    if (pk !== APP_PUBLIC_KEY) {
+      throw new Error('Dieser Schlüssel passt nicht zur App. Codes damit würden in Echoes abgelehnt.');
+    }
+    secretKey = sk;
+    if (remember) { try { localStorage.setItem(STORE, json); } catch {} }
+    setStatus($('keyStatus'), 'Schlüssel geladen ✓ – passt zur App.', true);
+    $('forgetKey').hidden = false;
+    $('make').disabled = false;
+  }
+
+  $('keyFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try { useKey(await file.text(), true); }
+    catch (err) { setStatus($('keyStatus'), err.message, false); }
+    e.target.value = '';
+  });
+
+  $('forgetKey').addEventListener('click', () => {
+    try { localStorage.removeItem(STORE); } catch {}
+    secretKey = null;
+    $('make').disabled = true;
+    $('forgetKey').hidden = true;
+    setStatus($('keyStatus'), 'Noch kein Schlüssel geladen.', false);
+  });
+
+  function cleanUrl(raw) {
+    let url = raw.trim();
+    if (!/^https?:\/\//i.test(url)) return null;
+    if (/dropbox\.com/i.test(url)) url = url.replace(/([?&])dl=0/, '$1dl=1').replace(/^(?!.*[?&]dl=1)(.*)$/, (m) => m + (m.includes('?') ? '&' : '?') + 'dl=1');
+    return url;
+  }
+
+  function makeCode(url, title) {
+    const payload = toB64Url(new TextEncoder().encode(JSON.stringify(title ? { u: url, t: title } : { u: url })));
+    const sig = toB64Url(nacl.sign.detached(ascii(payload), secretKey));
+    return PREFIX + payload + '.' + sig;
+  }
+
+  async function drawQr(code, title) {
+    const qr = qrcode(0, 'M');
+    qr.addData(code);
+    qr.make();
+    const count = qr.getModuleCount();
+    const quiet = 4, scale = Math.max(6, Math.floor(720 / (count + quiet * 2)));
+    const size = (count + quiet * 2) * scale;
+    const caption = title ? 90 : 0;
+    const canvas = $('qr');
+    canvas.width = size;
+    canvas.height = size + caption;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+    for (let r = 0; r < count; r++)
+      for (let c = 0; c < count; c++)
+        if (qr.isDark(r, c)) ctx.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
+    if (title) {
+      try { await document.fonts.load('700 34px Quicksand'); } catch {}
+      ctx.font = '700 34px Quicksand, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, size / 2, size + 40, size - 40);
+      ctx.font = '600 22px Quicksand, sans-serif';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Echoes', size / 2, size + 74);
+    }
+  }
+
+  $('make').addEventListener('click', async () => {
+    const url = cleanUrl($('url').value);
+    const title = $('title').value.trim();
+    if (!url) return setStatus($('formStatus'), 'Bitte einen Link eingeben, der mit https:// beginnt.', false);
+    if (/drive\.google\.com/i.test(url)) {
+      return setStatus($('formStatus'), 'Google-Drive-Freigabelinks zeigen auf eine Webseite, nicht auf die MP3. Nutze z. B. Dropbox oder deine eigene Website.', false);
+    }
+    $('url').value = url;
+    $('formStatus').hidden = true;
+    const code = makeCode(url, title);
+    await drawQr(code, title);
+    $('codeText').textContent = code;
+    $('resultTitle').textContent = title ? 'QR-Code: ' + title : 'Dein QR-Code';
+    $('preview').src = url;
+    $('result').style.display = 'block';
+    $('result').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  $('download').addEventListener('click', () => {
+    const name = ($('title').value.trim() || 'echo').replace(/[^a-z0-9äöüß -]/gi, '').replace(/\s+/g, '-').toLowerCase();
+    const a = document.createElement('a');
+    a.download = 'echoes-' + (name || 'echo') + '.png';
+    a.href = $('qr').toDataURL('image/png');
+    a.click();
+  });
+
+  $('copy').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText($('codeText').textContent);
+      $('copy').textContent = 'Kopiert ✓';
+      setTimeout(() => ($('copy').textContent = 'Code kopieren'), 1500);
+    } catch {
+      $('copy').textContent = 'Bitte Text unten markieren';
+    }
+  });
+
+  window.addEventListener('load', () => {
+    if (typeof nacl === 'undefined' || typeof qrcode === 'undefined') {
+      return setStatus($('keyStatus'), 'Die Seite braucht eine Internetverbindung, um zu starten. Bitte neu laden.', false);
+    }
+    let saved = null;
+    try { saved = localStorage.getItem(STORE); } catch {}
+    if (saved) { try { useKey(saved, false); } catch {} }
+  });
+</script>
+</body>
+</html>

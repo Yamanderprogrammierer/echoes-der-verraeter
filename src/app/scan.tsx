@@ -17,7 +17,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAudio } from '@/AudioContext';
-import { BLOCKED_MESSAGE, colors, extractUrl, fonts, glowShadow } from '@/theme';
+import { readCode, signedCodesOnly } from '@/codes';
+import { BLOCKED_MESSAGE, colors, fonts, glowShadow } from '@/theme';
 
 function close() {
   if (router.canGoBack()) router.back();
@@ -30,7 +31,7 @@ export default function ScanScreen() {
   const { width, height } = useWindowDimensions();
   const landscape = width > height;
   const [permission, requestPermission] = useCameraPermissions();
-  const { openLink } = useAudio();
+  const { openEcho } = useAudio();
   const locked = useRef(false);
   const [torch, setTorch] = useState(false);
   const [readingPhoto, setReadingPhoto] = useState(false);
@@ -46,21 +47,21 @@ export default function ScanScreen() {
   /** Handles the text of a QR code, from the camera or from a photo. Expects `locked` to be set. */
   const handleCode = useCallback(
     (data: string) => {
-      const url = extractUrl(data);
-      if (!url) {
+      const result = readCode(data);
+      if (!result.ok) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-        Alert.alert('Kein Audio-Link', `Dieser QR-Code enthält:\n\n${data}`, unlockAfterOk);
+        if (result.reason === 'no-link' && !signedCodesOnly) {
+          Alert.alert('Kein Audio-Link', `Dieser QR-Code enthält:\n\n${data}`, unlockAfterOk);
+        } else {
+          Alert.alert('Unbekannter QR-Code', BLOCKED_MESSAGE, unlockAfterOk);
+        }
         return;
       }
-      if (openLink(url) === 'blocked') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-        Alert.alert('Unbekannter QR-Code', BLOCKED_MESSAGE, unlockAfterOk);
-        return;
-      }
+      openEcho(result.url, result.title);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       close();
     },
-    [openLink, unlockAfterOk],
+    [openEcho, unlockAfterOk],
   );
 
   const onScanned = useCallback(

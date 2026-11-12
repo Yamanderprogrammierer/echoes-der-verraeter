@@ -7,7 +7,7 @@ The UI is in German, with a dark style and glowing controls, built with Expo Rou
 
 - **Header** (on Lauschen and Lösen): the glowing **Echoes** title. Below it, a play/pause button, the `Lauschen | Lösen` switch, and a keyboard button for typing in an MP3 link.
 - **Lauschen** (listen, `src/app/index.tsx`): a big echo button in the middle. Tapping it opens the camera scanner (`src/app/scan.tsx`). The camera only runs while the scanner is open. A QR code that holds an MP3 link (`https://…/file.mp3`) vibrates briefly, starts playing and closes the scanner. While audio plays, the echo's waveform moves and the hint changes to "Neuen QR Code scannen". After a scan, a player panel shows a slider to jump anywhere in the MP3, play/pause, buttons to skip 5 seconds back or forward (also on the lock screen), and a speed button (1× → 0,75× → 0,5×). Under the scan frame are a flashlight button for dark rooms and a **Fotos** button to read a QR code from a picture.
-- **Echo names**: add `?titel=…` to an MP3 link to give it a name, e.g. `https://example.com/echo3.mp3?titel=Die%20Stimme%20im%20Keller`. Without it, the file name is used.
+- **Echo names**: you enter the name in the QR generator (see below). Without a name, the file name is used.
 - **Neues Spiel**: at the bottom of "Gefundene Echos". After a confirmation, it deletes all found echoes on the device, so the next group starts fresh.
 - **Picks up where you left off**: after closing the app or restarting the iPhone, the last echo reopens (paused) at the same spot and speed. If an MP3 can't be loaded, the panel shows an error with **Erneut versuchen**.
 - **Gefundene Echos** (`src/app/echos.tsx`): opened from the button under the echo. It lists every echo found so far. Tap one to hear it again, or use the bin icon (or long-press) to delete it.
@@ -16,8 +16,24 @@ The UI is in German, with a dark style and glowing controls, built with Expo Rou
 - Plays when the silent switch is on, keeps playing in the background, and shows lock-screen / Control Center controls.
 - iPad: works in every orientation and in Split View.
 
-## Only allow your own QR codes
-By default, any `http(s)` MP3 link plays. Once your MP3s are online, add your website to `ALLOWED_HOSTS` in [`src/config.ts`](src/config.ts), for example `['meine-seite.de']`. QR codes that point anywhere else are then rejected with "Dieser Link gehört nicht zu Echoes."
+## Only your own QR codes (signed codes)
+Echoes only plays QR codes that you made with your own generator. Plain MP3 links, other people's QR codes and copied or changed codes are rejected with "Dieser QR-Code gehört nicht zu Echoes."
+
+**Making a QR code**
+1. Upload the MP3 somewhere it can be downloaded directly (your website, Dropbox …).
+2. Open [`tools/qr-generator.html`](tools/qr-generator.html) in your browser (double-click it).
+3. The first time only: click **Schlüssel-Datei wählen** and pick `tools/echoes-schluessel.json`. The browser remembers it on this PC.
+4. Paste the MP3 link, enter a name (e.g. "Die Stimme im Keller"), and click **QR-Code erstellen**.
+5. Use the audio player there to check the link works, then click **PNG herunterladen** and print it.
+
+**How it works**: every code is signed with the secret key in `tools/echoes-schluessel.json`. The app contains only the matching public key (`ECHOES_PUBLIC_KEY` in [`src/config.ts`](src/config.ts)), so it can check codes but can't make them. A code looks like `ECHOES1.…` and contains the MP3 link and the name.
+
+**Keep the key safe**:
+- `tools/echoes-schluessel.json` is in `.gitignore` and is never committed. **Make a backup** (USB stick, password manager). Without it, you can't make new codes. Codes you've already printed keep working.
+- Never share it. Anyone who has it can make codes for your app.
+- `npm run qr:schluessel -- --ueberschreiben` creates a new key. This makes **all** printed codes invalid, and you'd have to put the new public key into the app and release an update.
+
+To accept plain MP3 links again (e.g. for testing), set `ECHOES_PUBLIC_KEY` to `''` in `src/config.ts`. Then `ALLOWED_HOSTS` in the same file can limit them to your website.
 
 ## Run it
 ```bash

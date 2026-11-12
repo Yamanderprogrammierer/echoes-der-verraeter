@@ -5,30 +5,32 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAudio } from '@/AudioContext';
-import { BLOCKED_MESSAGE, colors, extractUrl, fonts, glowShadow } from '@/theme';
+import { readCode, signedCodesOnly } from '@/codes';
+import { BLOCKED_MESSAGE, colors, fonts, glowShadow } from '@/theme';
 
 type Mode = 'lauschen' | 'loesen';
 
 /** "Echoes" title plus the row with play button, Lauschen/Lösen switch and keyboard button. */
 export default function Header({ mode, compact }: { mode: Mode; compact?: boolean }) {
   const insets = useSafeAreaInsets();
-  const { current, status, togglePlay, openLink } = useAudio();
+  const { current, status, togglePlay, openEcho } = useAudio();
 
+  // With signed codes on, this takes a copied Echoes code (e.g. sent in a message); otherwise a plain MP3 link.
   const enterLink = () => {
     Alert.prompt(
-      'Link eingeben',
-      'Füge die Adresse einer MP3-Datei ein.',
+      signedCodesOnly ? 'Code eingeben' : 'Link eingeben',
+      signedCodesOnly ? 'Füge einen Echoes-Code ein.' : 'Füge die Adresse einer MP3-Datei ein.',
       (text) => {
-        const url = extractUrl(text ?? '');
-        if (!url) {
-          if (text) Alert.alert('Ungültiger Link', 'Der Link muss mit http:// oder https:// beginnen.');
-          return;
-        }
-        if (openLink(url) === 'blocked') Alert.alert('Unbekannter Link', BLOCKED_MESSAGE);
+        if (!text?.trim()) return;
+        const result = readCode(text);
+        if (result.ok) openEcho(result.url, result.title);
+        else if (result.reason === 'no-link' && !signedCodesOnly)
+          Alert.alert('Ungültiger Link', 'Der Link muss mit http:// oder https:// beginnen.');
+        else Alert.alert(signedCodesOnly ? 'Ungültiger Code' : 'Unbekannter Link', BLOCKED_MESSAGE);
       },
       'plain-text',
       '',
-      'url',
+      signedCodesOnly ? 'default' : 'url',
     );
   };
 
