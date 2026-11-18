@@ -38,5 +38,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
+rem Opens the print page with the echo QR codes and the QR code that opens the app.
+if exist "qr-codes\drucken.html" start "" "qr-codes\drucken.html"
 if exist "Echoes-App-QR.png" start "" "Echoes-App-QR.png"
 pause
