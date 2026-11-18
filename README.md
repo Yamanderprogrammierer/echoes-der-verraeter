@@ -30,6 +30,18 @@ Things to know:
 - **App size:** every MP3 makes the app bigger. A few dozen short clips are fine.
 - `npm run echoes` rewrites `src/bundledEchoes.ts` and the `qr-codes/` folder each time. Don't edit them by hand.
 
+## Using the app without the laptop (Expo Go, e.g. at school)
+The app can be opened in Expo Go straight from Expo's servers, without `npx expo start`:
+
+1. Double-click **`Echoes hochladen (Schule).bat`**, or run `npm run schule`. It builds in new MP3s from `assets/echoes`, uploads the app on the channel `schule`, and opens `Echoes-App-QR.png`.
+2. Scan that QR code once with the iPhone camera. The app opens in Expo Go and stays under "Recently opened".
+3. After changes, upload again the same way. Expo Go loads the new version next time the app is opened.
+
+Notes:
+- The link is `exp://u.expo.dev/0423b2e2-1e7a-410d-af81-103334e63acc?runtime-version=exposdk%3A58.0.0&channel-name=schule`. Anyone with it can open the app, but only your signed QR codes play.
+- `app.config.js` labels this upload with the Expo SDK version (`exposdk:58.0.0`), which Expo Go requires. Normal builds keep `runtimeVersion` from `app.json`.
+- When Expo Go itself moves to a newer SDK, the project has to be upgraded before the link works again.
+
 ## Sending new echoes to players (over-the-air updates)
 The app is linked to the Expo project `@pascalll69/qr-audio-player`, and EAS Update is set up. New MP3s and code changes reach installed apps **without a new App Store version**:
 

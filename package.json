@@ -41,6 +41,7 @@
     "lint": "expo lint",
     "qr:schluessel": "node tools/neuer-schluessel.mjs",
     "echoes": "node tools/echoes-aus-ordner.mjs",
+    "schule": "node tools/schule-hochladen.mjs",
     "update:test": "npx eas-cli@latest update --channel preview --environment preview --message \"Neue Echos\"",
     "update:spieler": "npx eas-cli@latest update --channel production --environment production --message \"Neue Echos\""
   },
